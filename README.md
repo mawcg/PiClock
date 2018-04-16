@@ -3,7 +3,7 @@
 
 A Ham Radio Clock built around a monitor and a Raspberry Pi
 
-![HamPiClock Picture](https://raw.githubusercontent.com/n0bel/PiClock/master/Pictures/20150307_222711.jpg)
+![HamPiClock Picture](http://github.com/mawcg/PiClock/Screen Shot 2018-04-16 at 2.08.21 PM.png)
 
 This project is a fork from Kevin Uhlir's Pi-clock.  I modified it to be put into a communication trailer I am building.  It takes it's current location from a GPS receiver and provides the current coordinates and grid location.
 
