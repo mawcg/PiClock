@@ -1,26 +1,13 @@
 # PiClock
-A Fancy Clock built around a monitor and a Raspberry Pi
+A Ham Radio Clock built around a monitor and a Raspberry Pi
 
-![PiClock Picture](https://raw.githubusercontent.com/n0bel/PiClock/master/Pictures/20150307_222711.jpg)
+This project is a fork from Kevin Uhlir's Pi-clock.  I modified it to be put into a communication trailer I am building.  It takes it's current location from a GPS receiver and provides the current coordinates and grid location.
 
-This project started out as a way to waste a Saturday afternoon.
-I had a Raspberry Pi and an extra monitor and had just taken down an analog clock from my livingroom wall.
-I was contemplating getting a radio sync'ed analog clock to replace it, so I didn't have to worry about
-it being accurate.
+Because I was adding so much more information I removed the analog clock option.  I am still working on what happens when there is no internet to get the weather information.  I might eventually try to hook it into APRS or a local weather station on the trailer.
 
-But instead the PiClock was born.
+I want to also add the the UTM coordintates but I have not figured out yet how to convert Lat/Lon into UTM.
 
-The early days and evolution of it are chronicled on my blog http://n0bel.net/v1/index.php/projects/raspberry-pi-clock
+If you are using a GPS to get your current location, be sure to also use it to set the clock on the Pi.  My Pi that is running this clock also has an NTP server running on it so the other computers in the trailer can use it as a time server.
 
-If you want to build your own, I'd suggest starting with the overview
-https://github.com/n0bel/PiClock/blob/master/Documentation/Overview.md
+Here is a link to the original clock that was created by Kevin: https://github.com/n0bel/PiClock
 
-If you want to use the PiClock on your desktop (not your Pi), I'd suggest using these instructions.
-https://github.com/n0bel/PiClock/blob/master/Documentation/Install-Clock-Only.md
-
-All of the extra hardware (IR Remote, GPIO buttons, Temperature, LEDs) are optional, so you can then jump to the install guide
-https://github.com/n0bel/PiClock/blob/master/Documentation/Install.md
-
-Of course you can jump to the hardware guide anytime https://github.com/n0bel/PiClock/blob/master/Documentation/Hardware.md
-
- 
