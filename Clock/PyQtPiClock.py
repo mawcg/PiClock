@@ -23,13 +23,15 @@ sys.dont_write_bytecode = True
 from GoogleMercatorProjection import getCorners             # NOQA
 import ApiKeys                                              # NOQA
 
+upper = 'ABCDEFGHIJKLMNOPQRSTUVWX'
+lower = 'abcdefghijklmnopqrstuvwx'
 
 def tick():
     global hourpixmap, minpixmap, secpixmap
     global hourpixmap2, minpixmap2, secpixmap2
     global lastmin, lastday, lasttimestr
     global clockrect
-    global datex, datex2, datey2, pdy
+    global datex, datex2, datey2, pdy, callsign, latlon, gridsquare
 
     if Config.DateLocale != "":
         try:
@@ -38,71 +40,19 @@ def tick():
             pass
 
     now = datetime.datetime.now()
-    if Config.digital:
-        timestr = Config.digitalformat.format(now)
-        if Config.digitalformat.find("%I") > -1:
-            if timestr[0] == '0':
-                timestr = timestr[1:99]
-        if lasttimestr != timestr:
-            clockface.setText(timestr.lower())
-        lasttimestr = timestr
-    else:
-        angle = now.second * 6
-        ts = secpixmap.size()
-        secpixmap2 = secpixmap.transformed(
-            QtGui.QMatrix().scale(
-                float(clockrect.width()) / ts.height(),
-                float(clockrect.height()) / ts.height()
-            ).rotate(angle),
-            Qt.SmoothTransformation
-        )
-        sechand.setPixmap(secpixmap2)
-        ts = secpixmap2.size()
-        sechand.setGeometry(
-            clockrect.center().x() - ts.width() / 2,
-            clockrect.center().y() - ts.height() / 2,
-            ts.width(),
-            ts.height()
-        )
-        if now.minute != lastmin:
-            lastmin = now.minute
-            angle = now.minute * 6
-            ts = minpixmap.size()
-            minpixmap2 = minpixmap.transformed(
-                QtGui.QMatrix().scale(
-                    float(clockrect.width()) / ts.height(),
-                    float(clockrect.height()) / ts.height()
-                ).rotate(angle),
-                Qt.SmoothTransformation
-            )
-            minhand.setPixmap(minpixmap2)
-            ts = minpixmap2.size()
-            minhand.setGeometry(
-                clockrect.center().x() - ts.width() / 2,
-                clockrect.center().y() - ts.height() / 2,
-                ts.width(),
-                ts.height()
-            )
+    timestr = Config.digitalformat.format(now)
+    if Config.digitalformat.find("%I") > -1:
+        if timestr[0] == '0':
+            timestr = timestr[1:99]
+    if lasttimestr != timestr:
+        clockface.setText(timestr.lower())
+        callsign.setText(Config.callsign.upper())
+        latlon.setText(str(Config.cur_lat) + ' /\n' + str(Config.cur_lon))
+        gridsquare.setText(to_grid(Config.cur_lat, Config.cur_lon))
 
-            angle = ((now.hour % 12) + now.minute / 60.0) * 30.0
-            ts = hourpixmap.size()
-            hourpixmap2 = hourpixmap.transformed(
-                QtGui.QMatrix().scale(
-                    float(clockrect.width()) / ts.height(),
-                    float(clockrect.height()) / ts.height()
-                ).rotate(angle),
-                Qt.SmoothTransformation
-            )
-            hourhand.setPixmap(hourpixmap2)
-            ts = hourpixmap2.size()
-            hourhand.setGeometry(
-                clockrect.center().x() - ts.width() / 2,
-                clockrect.center().y() - ts.height() / 2,
-                ts.width(),
-                ts.height()
-            )
+    lasttimestr = timestr
 
-    dy = "{0:%I:%M %p}".format(now)
+    dy = "{0:%I}".format(now)
     if dy != pdy:
         pdy = dy
         datey2.setText(dy)
@@ -672,6 +622,32 @@ def nextframe(plusminus):
     fixupframe(frames[framep], True)
 
 
+def to_grid(dec_lat, dec_lon):
+    if not (-180<=dec_lon<180):
+        sys.stderr.write('longitude must be -180<=lon<180, given %f\n'%dec_lon)
+        sys.exit(32)
+    if not (-90<=dec_lat<90):
+        sys.stderr.write('latitude must be -90<=lat<90, given %f\n'%dec_lat)
+        sys.exit(33) # can't handle north pole, sorry, [A-R]
+
+    adj_lat = dec_lat + 90.0
+    adj_lon = dec_lon + 180.0
+
+    grid_lat_sq = upper[int(adj_lat/10)];
+    grid_lon_sq = upper[int(adj_lon/20)];
+
+    grid_lat_field = str(int(adj_lat%10))
+    grid_lon_field = str(int((adj_lon/2)%10))
+
+    adj_lat_remainder = (adj_lat - int(adj_lat)) * 60
+    adj_lon_remainder = ((adj_lon) - int(adj_lon/2)*2) * 60
+
+    grid_lat_subsq = lower[int(adj_lat_remainder/2.5)]
+    grid_lon_subsq = lower[int(adj_lon_remainder/5)]
+
+    return grid_lon_sq + grid_lat_sq + grid_lon_field + grid_lat_field + grid_lon_subsq + grid_lat_subsq
+
+
 class myMain(QtGui.QWidget):
 
     def keyPressEvent(self, event):
@@ -757,7 +733,7 @@ except AttributeError:
 try:
     Config.digital
 except AttributeError:
-    Config.digital = 0
+    Config.digital = 1
 
 try:
     Config.LPressure
@@ -850,65 +826,99 @@ squares2.setStyleSheet(
     Config.squares2 +
     ") 0 0 0 0 stretch stretch;}")
 
-if not Config.digital:
-    clockface = QtGui.QFrame(frame1)
-    clockface.setObjectName("clockface")
-    clockrect = QtCore.QRect(
-        width / 2 - height * .4,
-        height * .45 - height * .4,
-        height * .8,
-        height * .8)
-    clockface.setGeometry(clockrect)
-    clockface.setStyleSheet(
-        "#clockface { background-color: transparent; border-image: url(" +
-        Config.clockface +
-        ") 0 0 0 0 stretch stretch;}")
+clockface = QtGui.QLabel(frame1)
+clockface.setObjectName("clockface")
+clockrect = QtCore.QRect(
+    width / 2 - height * .4,
+    1,
+#    height * .45 - height * .4,
+    height * .8,
+    height * .3)
+clockface.setGeometry(clockrect)
+dcolor = QColor(Config.digitalcolor).darker(0).name()
+lcolor = QColor(Config.digitalcolor).lighter(120).name()
+clockface.setStyleSheet(
+    "#clockface { background-color: transparent; font-family:sans-serif;" +
+    " font-weight: bold; color: " +
+    lcolor +
+    "; background-color: transparent; font-size: " +
+    str(int(Config.digitalsize * xscale)) +
+    "px; " +
+    Config.fontattr +
+    "}")
+clockface.setAlignment(Qt.AlignCenter)
 
-    hourhand = QtGui.QLabel(frame1)
-    hourhand.setObjectName("hourhand")
-    hourhand.setStyleSheet("#hourhand { background-color: transparent; }")
+callsign = QtGui.QLabel(frame1)
+callsign.setObjectName("callsign")
+callsignrect = QtCore.QRect(
+    width / 2 - height * .4,
+    100,
+#    height * .45 - height * .4,
+    height * .8,
+    height * .3)
+callsign.setGeometry(callsignrect)
+dcolor = QColor(Config.digitalcolor).darker(0).name()
+lcolor = QColor(Config.digitalcolor).lighter(120).name()
+callsign.setStyleSheet(
+    "#callsign { background-color: transparent; font-family:sans-serif;" +
+    "  color: " +
+    lcolor +
+    "; background-color: transparent; font-size: " +
+    str(int(Config.callsignsize * xscale)) +
+    "px; " +
+    Config.fontattr +
+    "}")
+callsign.setAlignment(Qt.AlignCenter)
 
-    minhand = QtGui.QLabel(frame1)
-    minhand.setObjectName("minhand")
-    minhand.setStyleSheet("#minhand { background-color: transparent; }")
+latlon = QtGui.QLabel(frame1)
+latlon.setObjectName("latlon")
+latlonrect = QtCore.QRect(
+    width / 2 - height * .4,
+    230,
+#    height * .45 - height * .4,
+    height * .8,
+    height * .3)
+latlon.setGeometry(latlonrect)
+dcolor = QColor(Config.digitalcolor).darker(0).name()
+lcolor = QColor(Config.digitalcolor).lighter(120).name()
+latlon.setStyleSheet(
+    "#latlon { background-color: transparent; font-family:sans-serif;" +
+    " font-weight: bold;  color: " +
+    lcolor +
+    "; background-color: transparent; font-size: " +
+    str(int(Config.latlonsize * xscale)) +
+    "px; " +
+    Config.fontattr +
+    "}")
+latlon.setAlignment(Qt.AlignCenter)
 
-    sechand = QtGui.QLabel(frame1)
-    sechand.setObjectName("sechand")
-    sechand.setStyleSheet("#sechand { background-color: transparent; }")
+gridsquare = QtGui.QLabel(frame1)
+gridsquare.setObjectName("gridsquare")
+gridsquarerect = QtCore.QRect(
+    width / 2 - height * .4,
+    330,
+#    height * .45 - height * .4,
+    height * .8,
+    height * .3)
+gridsquare.setGeometry(gridsquarerect)
+dcolor = QColor(Config.digitalcolor).darker(0).name()
+lcolor = QColor(Config.digitalcolor).lighter(120).name()
+gridsquare.setStyleSheet(
+    "#gridsquare { background-color: transparent; font-family:sans-serif;" +
+    "  color: " +
+    lcolor +
+    "; background-color: transparent; font-size: " +
+    str(int(Config.gridsquaresize * xscale)) +
+    "px; " +
+    Config.fontattr +
+    "}")
+gridsquare.setAlignment(Qt.AlignCenter)
 
-    hourpixmap = QtGui.QPixmap(Config.hourhand)
-    hourpixmap2 = QtGui.QPixmap(Config.hourhand)
-    minpixmap = QtGui.QPixmap(Config.minhand)
-    minpixmap2 = QtGui.QPixmap(Config.minhand)
-    secpixmap = QtGui.QPixmap(Config.sechand)
-    secpixmap2 = QtGui.QPixmap(Config.sechand)
-else:
-    clockface = QtGui.QLabel(frame1)
-    clockface.setObjectName("clockface")
-    clockrect = QtCore.QRect(
-        width / 2 - height * .4,
-        height * .45 - height * .4,
-        height * .8,
-        height * .8)
-    clockface.setGeometry(clockrect)
-    dcolor = QColor(Config.digitalcolor).darker(0).name()
-    lcolor = QColor(Config.digitalcolor).lighter(120).name()
-    clockface.setStyleSheet(
-        "#clockface { background-color: transparent; font-family:sans-serif;" +
-        " font-weight: light; color: " +
-        lcolor +
-        "; background-color: transparent; font-size: " +
-        str(int(Config.digitalsize * xscale)) +
-        "px; " +
-        Config.fontattr +
-        "}")
-    clockface.setAlignment(Qt.AlignCenter)
-    clockface.setGeometry(clockrect)
-    glow = QtGui.QGraphicsDropShadowEffect()
-    glow.setOffset(0)
-    glow.setBlurRadius(50)
-    glow.setColor(QColor(dcolor))
-    clockface.setGraphicsEffect(glow)
+glow = QtGui.QGraphicsDropShadowEffect()
+glow.setOffset(0)
+glow.setBlurRadius(50)
+glow.setColor(QColor(dcolor))
+clockface.setGraphicsEffect(glow)
 
 
 radar1rect = QtCore.QRect(3 * xscale, 344 * yscale, 300 * xscale, 275 * yscale)
