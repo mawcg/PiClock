@@ -5,39 +5,31 @@ from PyQt4.QtGui import QColor
 # LOCATION(S)
 # Further radar configuration (zoom, marker location) can be
 # completed under the RADAR section
-primary_coordinates = 44.9764016, -93.2486732  # Change to your Lat/Lon
+primary_coordinates = 39.347538, -77.616998  # Change to your Lat/Lon
+cur_lat = 39.347538
+cur_lon = -77.616998
+callsign = 'N0CAL'
+usegps = 0
+
 
 wuprefix = 'http://api.wunderground.com/api/'
 wulocation = LatLng(primary_coordinates[0], primary_coordinates[1])
 primary_location = LatLng(primary_coordinates[0], primary_coordinates[1])
 noaastream = 'http://audioplayer.wunderground.com:80/tim273/edina'
-background = 'images/clockbackground-kevin.png'
-squares1 = 'images/squares1-kevin.png'
-squares2 = 'images/squares2-kevin.png'
+background = 'images/clockbackground-.png'
+squares1 = 'images/squares1-jean.png'
+squares2 = 'images/squares2-jean.png'
 icons = 'icons-lightblue'
 textcolor = '#bef'
-clockface = 'images/clockface3.png'
-hourhand = 'images/hourhand.png'
-minhand = 'images/minhand.png'
-sechand = 'images/sechand.png'
 
-
-digital = 0             # 1 = Digtal Clock, 0 = Analog Clock
 
 # Goes with light blue config (like the default one)
-digitalcolor = "#50CBEB"
-digitalformat = "{0:%I:%M\n%S %p}"  # The format of the time
+digitalcolor = "#FFFFFF"
+digitalformat = "{0:%I:%M}"  # The format of the time
 digitalsize = 200
-# The above example shows in this way:
-#  https://github.com/n0bel/PiClock/blob/master/Documentation/Digital%20Clock%20v1.jpg
-# ( specifications of the time string are documented here:
-#  https://docs.python.org/2/library/time.html#time.strftime )
-
-# digitalformat = "{0:%I:%M}"
-# digitalsize = 250
-#  The above example shows in this way:
-#  https://github.com/n0bel/PiClock/blob/master/Documentation/Digital%20Clock%20v2.jpg
-
+callsignsize = 150
+latlonsize = 70
+gridsquaresize = 70
 
 metric = 0  # 0 = English, 1 = Metric
 radar_refresh = 10      # minutes
