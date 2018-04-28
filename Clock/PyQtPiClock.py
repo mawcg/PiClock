@@ -10,6 +10,7 @@ import json
 import locale
 import random
 import re
+import utm
 
 from PyQt4 import QtGui, QtCore, QtNetwork
 from PyQt4.QtGui import QPixmap, QMovie, QBrush, QColor, QPainter
@@ -49,6 +50,8 @@ def tick():
         callsign.setText(Config.callsign.upper())
         latlon.setText(str(Config.cur_lat) + ' /\n' + str(Config.cur_lon))
         gridsquare.setText(to_grid(Config.cur_lat, Config.cur_lon))
+	utmloc = utm.from_latlon(Config.cur_lat, Config.cur_lon)
+        utmsquare.setText(str(utmloc[2]) + utmloc[3] + " " + str(format(utmloc[0], '.2f')) + "\n" + str(format(utmloc[1], '.2f')))
 
     lasttimestr = timestr
 
@@ -896,7 +899,7 @@ gridsquare = QtGui.QLabel(frame1)
 gridsquare.setObjectName("gridsquare")
 gridsquarerect = QtCore.QRect(
     width / 2 - height * .4,
-    330,
+    440,
 #    height * .45 - height * .4,
     height * .8,
     height * .3)
@@ -913,6 +916,28 @@ gridsquare.setStyleSheet(
     Config.fontattr +
     "}")
 gridsquare.setAlignment(Qt.AlignCenter)
+
+utmsquare = QtGui.QLabel(frame1)
+utmsquare.setObjectName("utmsquare")
+utmrect = QtCore.QRect(
+    width / 2 - height * .4,
+    350,
+#    height * .45 - height * .4,
+    height * .8,
+    height * .3)
+utmsquare.setGeometry(utmrect)
+dcolor = QColor(Config.digitalcolor).darker(0).name()
+lcolor = QColor(Config.digitalcolor).lighter(120).name()
+utmsquare.setStyleSheet(
+    "#utmsquare { background-color: transparent; font-family:sans-serif;" +
+    "  color: " +
+    lcolor +
+    "; background-color: transparent; font-size: " +
+    str(int(Config.gridsquaresize * xscale)) +
+    "px; " +
+    Config.fontattr +
+    "}")
+utmsquare.setAlignment(Qt.AlignCenter)
 
 glow = QtGui.QGraphicsDropShadowEffect()
 glow.setOffset(0)
@@ -1105,7 +1130,7 @@ bottom.setStyleSheet("#bottom { font-family:sans-serif; color: " +
                      Config.fontattr +
                      "}")
 bottom.setAlignment(Qt.AlignHCenter | Qt.AlignTop)
-bottom.setGeometry(0, height - 50, width, 50)
+bottom.setGeometry(0, height - 30, width, 30)
 
 temp = QtGui.QLabel(frame1)
 temp.setObjectName("temp")
