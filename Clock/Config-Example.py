@@ -22,6 +22,16 @@ squares2 = 'images/squares2-jean.png'
 icons = 'icons-lightblue'
 textcolor = '#bef'
 
+#Right Side Setup
+box[0] = "T:0";
+box[1] = "W:H3"
+box[2] = "W:H6"
+box[3] = "W:D1"
+box[4] = "W:D2"
+box[5] = "W:D3"
+box[6] = "W:D4"
+box[7] = "W:D5"
+box[8] = "W:D6"
 
 # Goes with light blue config (like the default one)
 digitalcolor = "#FFFFFF"

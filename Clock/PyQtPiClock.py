@@ -188,6 +188,7 @@ def wxfinished():
                    wxdata['moon_phase']['phaseofMoon']
                    )
 
+#    print wxdata['hourly_forecast']
     for i in range(0, 3):
         f = wxdata['hourly_forecast'][i * 3 + 2]
         fl = forecast[i]
