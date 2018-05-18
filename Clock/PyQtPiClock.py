@@ -11,6 +11,8 @@ import locale
 import random
 import re
 import utm
+from gps import *
+import threading
 
 from PyQt4 import QtGui, QtCore, QtNetwork
 from PyQt4.QtGui import QPixmap, QMovie, QBrush, QColor, QPainter
@@ -27,18 +29,25 @@ import ApiKeys                                              # NOQA
 upper = 'ABCDEFGHIJKLMNOPQRSTUVWX'
 lower = 'abcdefghijklmnopqrstuvwx'
 
+gpsd = None
+
 def tick():
     global hourpixmap, minpixmap, secpixmap
     global hourpixmap2, minpixmap2, secpixmap2
     global lastmin, lastday, lasttimestr
     global clockrect
     global datex, datex2, datey2, pdy, callsign, latlon, gridsquare
+    global gpsd
 
     if Config.DateLocale != "":
         try:
             locale.setlocale(locale.LC_TIME, Config.DateLocale)
         except:
             pass
+
+    if Config.usegps == 1:
+        Config.cur_lat = gpsd.fix.latitude
+        Config.cur_lon = gpsd.fix.longitude
 
     now = datetime.datetime.now()
     timestr = Config.digitalformat.format(now)
@@ -294,6 +303,7 @@ def qtstart():
     global objradar2
     global objradar3
     global objradar4
+    global gpsp
 
     getallwx()
 
@@ -318,6 +328,9 @@ def qtstart():
     temptimer = QtCore.QTimer()
     temptimer.timeout.connect(gettemp)
     temptimer.start(1000 * 10 * 60 + random.uniform(1000, 10000))
+
+    if Config.usegps == 1:
+        gpsp.start() # start it up
 
 
 class Radar(QtGui.QLabel):
@@ -582,6 +595,19 @@ class Radar(QtGui.QLabel):
         except Exception:
             pass
 
+class GpsPoller(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
+        global gpsd #bring it in scope
+        gpsd = gps(mode=WATCH_ENABLE) #starting the stream of info
+        self.current_value = None
+        self.running = True #setting the thread running to true
+ 
+    def run(self):
+        global gpsd
+        while gpsp.running:
+            print "reading gps"
+            gpsd.next() #this will continue to loop and grab EACH set of gpsd info to clear the buffer
 
 def realquit():
     QtGui.QApplication.exit(0)
@@ -773,6 +799,8 @@ rec = desktop.screenGeometry()
 height = rec.height()
 width = rec.width()
 
+gpsp = GpsPoller() # create the thread
+
 signal.signal(signal.SIGINT, myquit)
 
 w = myMain()
@@ -834,7 +862,7 @@ clockface = QtGui.QLabel(frame1)
 clockface.setObjectName("clockface")
 clockrect = QtCore.QRect(
     width / 2 - height * .4,
-    1,
+    10,
 #    height * .45 - height * .4,
     height * .8,
     height * .3)
@@ -856,7 +884,7 @@ callsign = QtGui.QLabel(frame1)
 callsign.setObjectName("callsign")
 callsignrect = QtCore.QRect(
     width / 2 - height * .4,
-    100,
+    150,
 #    height * .45 - height * .4,
     height * .8,
     height * .3)
@@ -878,7 +906,7 @@ latlon = QtGui.QLabel(frame1)
 latlon.setObjectName("latlon")
 latlonrect = QtCore.QRect(
     width / 2 - height * .4,
-    230,
+    300,
 #    height * .45 - height * .4,
     height * .8,
     height * .3)
@@ -900,7 +928,7 @@ gridsquare = QtGui.QLabel(frame1)
 gridsquare.setObjectName("gridsquare")
 gridsquarerect = QtCore.QRect(
     width / 2 - height * .4,
-    440,
+    590,
 #    height * .45 - height * .4,
     height * .8,
     height * .3)
@@ -922,7 +950,7 @@ utmsquare = QtGui.QLabel(frame1)
 utmsquare.setObjectName("utmsquare")
 utmrect = QtCore.QRect(
     width / 2 - height * .4,
-    350,
+    460,
 #    height * .45 - height * .4,
     height * .8,
     height * .3)
