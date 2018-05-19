@@ -8,9 +8,75 @@ from PyQt4.QtGui import QColor
 primary_coordinates = 39.347538, -77.616998  # Change to your Lat/Lon
 cur_lat = 39.347538
 cur_lon = -77.616998
-callsign = 'N0CAL'
+callsign = 'N0CALL'
 usegps = 0
 
+# right sidebar setup
+# Types:
+#   0 = Hourly Weather
+#   1 = Daily Weather
+#   2 = Time Zone Time
+#   3 = Tide Details
+
+# Hourly Weather values
+#   Number of hours into the future to display.
+#   Numbers have to be greater than zero and less than 48
+
+# Daily Weather Values
+#   0 = Tomorrow
+#   1 = Day After Tomorrow
+#   2 = Three Days ahead of today
+#   3 = Four Days ahead of today
+#   4 = Five Days ahead of today
+#   5 = Six Days ahead of today
+#   6 = Seven Days ahead of today
+#   7 = Eight Days ahead of today
+
+# Time Zone Time values
+# hours (negative or positive) from UTC
+
+sidebar = {
+    0 : ({
+        'type'  : 0,
+        'value' : 1
+        }),
+    1 : {
+        'type'  : 0,
+        'value' : 3
+        },
+    2 : {
+        'type'  : 0,
+        'value' : 6
+        },
+    3 : {
+        'type'  : 1,
+        'value' : 0
+        },
+    4 : {
+        'type'  : 1,
+        'value' : 1
+        },
+    5 : {
+        'type'  : 1,
+        'value' : 2
+        },
+    6 : {
+        'type'  : 1,
+        'value' : 2
+        },
+    7 : {
+        'type'  : 1,
+        'value' : 2
+        },
+    8 : {
+        'type'  : 1,
+        'value' : 2
+        },
+    9 : {
+        'type'  : 1,
+        'value' : 2
+        }
+}
 
 wuprefix = 'http://api.wunderground.com/api/'
 wulocation = LatLng(primary_coordinates[0], primary_coordinates[1])
@@ -22,16 +88,6 @@ squares2 = 'images/squares2-jean.png'
 icons = 'icons-lightblue'
 textcolor = '#bef'
 
-#Right Side Setup
-box[0] = "T:0";
-box[1] = "W:H3"
-box[2] = "W:H6"
-box[3] = "W:D1"
-box[4] = "W:D2"
-box[5] = "W:D3"
-box[6] = "W:D4"
-box[7] = "W:D5"
-box[8] = "W:D6"
 
 # Goes with light blue config (like the default one)
 digitalcolor = "#FFFFFF"
@@ -40,9 +96,19 @@ digitalsize = 200
 callsignsize = 150
 latlonsize = 70
 gridsquaresize = 70
+# The above example shows in this way:
+#  https://github.com/n0bel/PiClock/blob/master/Documentation/Digital%20Clock%20v1.jpg
+# ( specifications of the time string are documented here:
+#  https://docs.python.org/2/library/time.html#time.strftime )
+
+# digitalformat = "{0:%I:%M}"
+# digitalsize = 250
+#  The above example shows in this way:
+#  https://github.com/n0bel/PiClock/blob/master/Documentation/Digital%20Clock%20v2.jpg
+
 
 metric = 0  # 0 = English, 1 = Metric
-radar_refresh = 10      # minutes
+radar_refresh = 20      # minutes
 weather_refresh = 30    # minutes
 # Wind in degrees instead of cardinal 0 = cardinal, 1 = degrees
 wind_degrees = 0
@@ -124,28 +190,3 @@ radar2 = {
 }
 
 
-radar3 = {
-    'center': primary_location,
-    'zoom': 7,
-    'satellite': 0,
-    'markers': (
-        {
-            'location': primary_location,
-            'color': 'red',
-            'size': 'small',
-        },
-    )
-}
-
-radar4 = {
-    'center': primary_location,
-    'zoom': 11,
-    'satellite': 0,
-    'markers': (
-        {
-            'location': primary_location,
-            'color': 'red',
-            'size': 'small',
-        },
-    )
-}

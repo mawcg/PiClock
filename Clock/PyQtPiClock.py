@@ -21,6 +21,7 @@ from PyQt4.QtCore import Qt
 from PyQt4.QtNetwork import QNetworkReply
 from PyQt4.QtNetwork import QNetworkRequest
 from subprocess import Popen
+from GoogleMercatorProjection import LatLng
 
 sys.dont_write_bytecode = True
 from GoogleMercatorProjection import getCorners             # NOQA
@@ -28,6 +29,7 @@ import ApiKeys                                              # NOQA
 
 upper = 'ABCDEFGHIJKLMNOPQRSTUVWX'
 lower = 'abcdefghijklmnopqrstuvwx'
+mapsloaded = False
 
 gpsd = None
 
@@ -38,6 +40,9 @@ def tick():
     global clockrect
     global datex, datex2, datey2, pdy, callsign, latlon, gridsquare
     global gpsd
+    #global Config
+    global mapsloaded
+    global radar1rect
 
     if Config.DateLocale != "":
         try:
@@ -48,6 +53,11 @@ def tick():
     if Config.usegps == 1:
         Config.cur_lat = gpsd.fix.latitude
         Config.cur_lon = gpsd.fix.longitude
+        Config.primary_coordinates = gpsd.fix.latitude, gpsd.fix.longitude
+        Config.wulocation = LatLng(Config.primary_coordinates[0], Config.primary_coordinates[1])
+        Config.primary_location = LatLng(Config.primary_coordinates[0], Config.primary_coordinates[1])
+        Config.radar1['center'] = Config.primary_location
+#        Config.wulocation = LatLng(gpsd.fix.latitude, gpsd.fix.longitude)
 
     now = datetime.datetime.now()
     timestr = Config.digitalformat.format(now)
@@ -84,6 +94,16 @@ def tick():
         ds = "{0:%A %B} {0.day}<sup>{1}</sup> {0.year}".format(now, sup)
         datex.setText(ds)
         datex2.setText(ds)
+
+    if Config.cur_lat != 0 and mapsloaded == False:
+        objradar1.reseturls(Config.radar1, radar1rect)
+        objradar1.start(Config.radar_refresh * 60)
+        objradar1.wxstart()
+        objradar2.reseturls(Config.radar2, radar2rect)
+        objradar2.start(Config.radar_refresh * 60)
+        objradar2.wxstart()
+        getwx()
+        mapsloaded = True
 
 
 def tempfinished():
@@ -198,81 +218,168 @@ def wxfinished():
                    )
 
 #    print wxdata['hourly_forecast']
-    for i in range(0, 3):
-        f = wxdata['hourly_forecast'][i * 3 + 2]
-        fl = forecast[i]
-        iconurl = f['icon_url']
-        icp = ''
-        if (re.search('/nt_', iconurl)):
-            icp = 'n_'
-        icon = fl.findChild(QtGui.QLabel, "icon")
-        wxiconpixmap = QtGui.QPixmap(
-            Config.icons + "/" + icp + f['icon'] + ".png")
-        icon.setPixmap(wxiconpixmap.scaled(
-            icon.width(),
-            icon.height(),
-            Qt.IgnoreAspectRatio,
-            Qt.SmoothTransformation))
-        wx = fl.findChild(QtGui.QLabel, "wx")
-        wx.setText(f['condition'])
-        day = fl.findChild(QtGui.QLabel, "day")
-        day.setText(f['FCTTIME']['weekday_name'] + ' ' + f['FCTTIME']['civil'])
-        wx2 = fl.findChild(QtGui.QLabel, "wx2")
-        s = ''
-        if float(f['pop']) > 0.0:
-            s += f['pop'] + '% '
-        if Config.metric:
-            if float(f['snow']['metric']) > 0.0:
-                s += Config.LSnow + f['snow']['metric'] + 'mm '
-            else:
-                if float(f['qpf']['metric']) > 0.0:
-                    s += Config.LRain + f['qpf']['metric'] + 'mm '
-            s += f['temp']['metric'] + u'°C'
-        else:
-            if float(f['snow']['english']) > 0.0:
-                s += Config.LSnow + f['snow']['english'] + 'in '
-            else:
-                if float(f['qpf']['english']) > 0.0:
-                    s += Config.LRain + f['qpf']['english'] + 'in '
-            s += f['temp']['english'] + u'°F'
+# New method of creating the right side bar.
+# each box can have different defined content that is configured in the config file
 
-        wx2.setText(s)
-
-    for i in range(3, 9):
-        f = wxdata['forecast']['simpleforecast']['forecastday'][i - 3]
+    for i in range(0, 9):
         fl = forecast[i]
-        icon = fl.findChild(QtGui.QLabel, "icon")
-        wxiconpixmap = QtGui.QPixmap(Config.icons + "/" + f['icon'] + ".png")
-        icon.setPixmap(wxiconpixmap.scaled(
-            icon.width(),
-            icon.height(),
-            Qt.IgnoreAspectRatio,
-            Qt.SmoothTransformation))
-        wx = fl.findChild(QtGui.QLabel, "wx")
-        wx.setText(f['conditions'])
-        day = fl.findChild(QtGui.QLabel, "day")
-        day.setText(f['date']['weekday'])
-        wx2 = fl.findChild(QtGui.QLabel, "wx2")
-        s = ''
-        if float(f['pop']) > 0.0:
-            s += str(f['pop']) + '% '
-        if Config.metric:
-            if float(f['snow_allday']['cm']) > 0.0:
-                s += Config.LSnow + str(f['snow_allday']['cm']) + 'cm '
+   
+        sidebartype = Config.sidebar[i]['type']
+        sidebarvalue = Config.sidebar[i]['value']
+        if sidebartype == 0:
+            if sidebarvalue < 1:
+                sidebarvalue = 1
+
+            f = wxdata['hourly_forecast'][sidebarvalue-1]
+            iconurl = f['icon_url']
+            icp = ''
+            if (re.search('/nt_', iconurl)):
+                icp = 'n_'
+            icon = fl.findChild(QtGui.QLabel, "icon")
+            wxiconpixmap = QtGui.QPixmap(
+                Config.icons + "/" + icp + f['icon'] + ".png")
+            icon.setPixmap(wxiconpixmap.scaled(
+                icon.width(),
+                icon.height(),
+                Qt.IgnoreAspectRatio,
+                Qt.SmoothTransformation))
+            wx = fl.findChild(QtGui.QLabel, "wx")
+            wx.setText(f['condition'])
+            day = fl.findChild(QtGui.QLabel, "day")
+            day.setText(f['FCTTIME']['weekday_name'] + ' ' + f['FCTTIME']['civil'])
+            wx2 = fl.findChild(QtGui.QLabel, "wx2")
+            s = ''
+            if float(f['pop']) > 0.0:
+                s += f['pop'] + '% '
+            if Config.metric:
+                if float(f['snow']['metric']) > 0.0:
+                    s += Config.LSnow + f['snow']['metric'] + 'mm '
+                else:
+                    if float(f['qpf']['metric']) > 0.0:
+                        s += Config.LRain + f['qpf']['metric'] + 'mm '
+                s += f['temp']['metric'] + u'°C'
             else:
-                if float(f['qpf_allday']['mm']) > 0.0:
-                    s += Config.LRain + str(f['qpf_allday']['mm']) + 'mm '
-            s += str(f['high']['celsius']) + '/' + \
-                str(f['low']['celsius']) + u'°C'
-        else:
-            if float(f['snow_allday']['in']) > 0.0:
-                s += Config.LSnow + str(f['snow_allday']['in']) + 'in '
+                if float(f['snow']['english']) > 0.0:
+                    s += Config.LSnow + f['snow']['english'] + 'in '
+                else:
+                    if float(f['qpf']['english']) > 0.0:
+                        s += Config.LRain + f['qpf']['english'] + 'in '
+                s += f['temp']['english'] + u'°F'
+
+            wx2.setText(s)
+
+
+        if sidebartype == 1:    
+            f = wxdata['forecast']['simpleforecast']['forecastday'][sidebarvalue]
+            icon = fl.findChild(QtGui.QLabel, "icon")
+            wxiconpixmap = QtGui.QPixmap(Config.icons + "/" + f['icon'] + ".png")
+            icon.setPixmap(wxiconpixmap.scaled(
+                icon.width(),
+                icon.height(),
+                Qt.IgnoreAspectRatio,
+                Qt.SmoothTransformation))
+            wx = fl.findChild(QtGui.QLabel, "wx")
+            wx.setText(f['conditions'])
+            day = fl.findChild(QtGui.QLabel, "day")
+            day.setText(f['date']['weekday'])
+            wx2 = fl.findChild(QtGui.QLabel, "wx2")
+            s = ''
+            if float(f['pop']) > 0.0:
+                s += str(f['pop']) + '% '
+            if Config.metric:
+                if float(f['snow_allday']['cm']) > 0.0:
+                    s += Config.LSnow + str(f['snow_allday']['cm']) + 'cm '
+                else:
+                    if float(f['qpf_allday']['mm']) > 0.0:
+                        s += Config.LRain + str(f['qpf_allday']['mm']) + 'mm '
+                s += str(f['high']['celsius']) + '/' + \
+                    str(f['low']['celsius']) + u'°C'
             else:
-                if float(f['qpf_allday']['in']) > 0.0:
-                    s += Config.LRain + str(f['qpf_allday']['in']) + 'in '
-            s += str(f['high']['fahrenheit']) + '/' + \
-                str(f['low']['fahrenheit']) + u'°F'
-        wx2.setText(s)
+                if float(f['snow_allday']['in']) > 0.0:
+                    s += Config.LSnow + str(f['snow_allday']['in']) + 'in '
+                else:
+                    if float(f['qpf_allday']['in']) > 0.0:
+                        s += Config.LRain + str(f['qpf_allday']['in']) + 'in '
+                s += str(f['high']['fahrenheit']) + '/' + \
+                    str(f['low']['fahrenheit']) + u'°F'
+            wx2.setText(s)
+
+   
+#    for i in range(0, 3):
+#        f = wxdata['hourly_forecast'][i * 3 + 2]
+#        fl = forecast[i]
+#        iconurl = f['icon_url']
+#        icp = ''
+#        if (re.search('/nt_', iconurl)):
+#            icp = 'n_'
+#        icon = fl.findChild(QtGui.QLabel, "icon")
+#        wxiconpixmap = QtGui.QPixmap(
+#            Config.icons + "/" + icp + f['icon'] + ".png")
+#        icon.setPixmap(wxiconpixmap.scaled(
+#            icon.width(),
+#            icon.height(),
+#            Qt.IgnoreAspectRatio,
+#            Qt.SmoothTransformation))
+#        wx = fl.findChild(QtGui.QLabel, "wx")
+#        wx.setText(f['condition'])
+#        day = fl.findChild(QtGui.QLabel, "day")
+#        day.setText(f['FCTTIME']['weekday_name'] + ' ' + f['FCTTIME']['civil'])
+#        wx2 = fl.findChild(QtGui.QLabel, "wx2")
+#        s = ''
+#        if float(f['pop']) > 0.0:
+#            s += f['pop'] + '% '
+#        if Config.metric:
+#            if float(f['snow']['metric']) > 0.0:
+#                s += Config.LSnow + f['snow']['metric'] + 'mm '
+#            else:
+#                if float(f['qpf']['metric']) > 0.0:
+#                    s += Config.LRain + f['qpf']['metric'] + 'mm '
+#            s += f['temp']['metric'] + u'°C'
+#        else:
+#            if float(f['snow']['english']) > 0.0:
+#                s += Config.LSnow + f['snow']['english'] + 'in '
+#            else:
+#                if float(f['qpf']['english']) > 0.0:
+#                    s += Config.LRain + f['qpf']['english'] + 'in '
+#            s += f['temp']['english'] + u'°F'
+#
+#        wx2.setText(s)
+
+#    for i in range(3, 9):
+#        f = wxdata['forecast']['simpleforecast']['forecastday'][i - 3]
+#        fl = forecast[i]
+#        icon = fl.findChild(QtGui.QLabel, "icon")
+#        wxiconpixmap = QtGui.QPixmap(Config.icons + "/" + f['icon'] + ".png")
+#        icon.setPixmap(wxiconpixmap.scaled(
+#            icon.width(),
+#            icon.height(),
+#            Qt.IgnoreAspectRatio,
+#            Qt.SmoothTransformation))
+#        wx = fl.findChild(QtGui.QLabel, "wx")
+#        wx.setText(f['conditions'])
+#        day = fl.findChild(QtGui.QLabel, "day")
+#        day.setText(f['date']['weekday'])
+#        wx2 = fl.findChild(QtGui.QLabel, "wx2")
+#        s = ''
+#        if float(f['pop']) > 0.0:
+#            s += str(f['pop']) + '% '
+#        if Config.metric:
+#            if float(f['snow_allday']['cm']) > 0.0:
+#                s += Config.LSnow + str(f['snow_allday']['cm']) + 'cm '
+#            else:
+#                if float(f['qpf_allday']['mm']) > 0.0:
+#                    s += Config.LRain + str(f['qpf_allday']['mm']) + 'mm '
+#            s += str(f['high']['celsius']) + '/' + \
+#                str(f['low']['celsius']) + u'°C'
+#        else:
+#            if float(f['snow_allday']['in']) > 0.0:
+#                s += Config.LSnow + str(f['snow_allday']['in']) + 'in '
+#            else:
+#                if float(f['qpf_allday']['in']) > 0.0:
+#                    s += Config.LRain + str(f['qpf_allday']['in']) + 'in '
+#            s += str(f['high']['fahrenheit']) + '/' + \
+#                str(f['low']['fahrenheit']) + u'°F'
+#        wx2.setText(s)
 
 
 def getwx():
@@ -301,20 +408,20 @@ def qtstart():
     global manager
     global objradar1
     global objradar2
-    global objradar3
-    global objradar4
     global gpsp
+    global mapsloaded
 
     getallwx()
 
     gettemp()
 
-    objradar1.start(Config.radar_refresh * 60)
-    objradar1.wxstart()
-    objradar2.start(Config.radar_refresh * 60)
-    objradar2.wxstart()
-    objradar3.start(Config.radar_refresh * 60)
-    objradar4.start(Config.radar_refresh * 60)
+    if Config.cur_lat != 0:
+        objradar1.start(Config.radar_refresh * 60)
+        objradar1.wxstart()
+        objradar2.start(Config.radar_refresh * 60)
+        objradar2.wxstart()
+        print "Loading maps in qtstart"
+        mapsloaded = True
 
     ctimer = QtCore.QTimer()
     ctimer.timeout.connect(tick)
@@ -371,6 +478,14 @@ class Radar(QtGui.QLabel):
         self.wmk.setGeometry(0, 0, rect.width(), rect.height())
 
         self.wxmovie = QMovie()
+
+    def reseturls(self, radar, rect):
+        self.baseurl = self.mapurl(radar, rect, False)
+        print "google map base url: " + self.baseurl
+        self.mkurl = self.mapurl(radar, rect, True)
+        self.wxurl = self.radarurl(radar, rect)
+        print "radar url: " + self.wxurl
+        
 
     def mapurl(self, radar, rect, markersonly):
         # 'https://maps.googleapis.com/maps/api/staticmap?maptype=hybrid&center='+rcenter.lat+','+rcenter.lng+'&zoom='+rzoom+'&size=300x275'+markersr;
@@ -606,7 +721,6 @@ class GpsPoller(threading.Thread):
     def run(self):
         global gpsd
         while gpsp.running:
-            print "reading gps"
             gpsd.next() #this will continue to loop and grab EACH set of gpsd info to clear the buffer
 
 def realquit():
@@ -614,13 +728,11 @@ def realquit():
 
 
 def myquit(a=0, b=0):
-    global objradar1, objradar2, objradar3, objradar4
+    global objradar1, objradar2
     global ctimer, wtimer, temptimer
 
     objradar1.stop()
     objradar2.stop()
-    objradar3.stop()
-    objradar4.stop()
     ctimer.stop()
     wxtimer.stop()
     temptimer.stop()
@@ -686,25 +798,6 @@ class myMain(QtGui.QWidget):
             # print event.key(), format(event.key(), '08x')
             if event.key() == Qt.Key_F4:
                 myquit()
-            if event.key() == Qt.Key_F2:
-                if time.time() > lastkeytime:
-                    if weatherplayer is None:
-                        weatherplayer = Popen(
-                            ["mpg123", "-q", Config.noaastream])
-                    else:
-                        weatherplayer.kill()
-                        weatherplayer = None
-                lastkeytime = time.time() + 2
-            if event.key() == Qt.Key_Space:
-                nextframe(1)
-            if event.key() == Qt.Key_Left:
-                nextframe(-1)
-            if event.key() == Qt.Key_Right:
-                nextframe(1)
-
-    def mousePressEvent(self, event):
-        if type(event) == QtGui.QMouseEvent:
-            nextframe(1)
 
 configname = 'Config'
 
@@ -980,14 +1073,6 @@ objradar1 = Radar(frame1, Config.radar1, radar1rect, "radar1")
 
 radar2rect = QtCore.QRect(3 * xscale, 622 * yscale, 300 * xscale, 275 * yscale)
 objradar2 = Radar(frame1, Config.radar2, radar2rect, "radar2")
-
-radar3rect = QtCore.QRect(13 * xscale, 50 * yscale, 700 * xscale, 700 * yscale)
-objradar3 = Radar(frame2, Config.radar3, radar3rect, "radar3")
-
-radar4rect = QtCore.QRect(726 * xscale, 50 * yscale,
-                          700 * xscale, 700 * yscale)
-objradar4 = Radar(frame2, Config.radar4, radar4rect, "radar4")
-
 
 datex = QtGui.QLabel(frame1)
 datex.setObjectName("datex")
